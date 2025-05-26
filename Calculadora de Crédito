@@ -1,119 +1,328 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Calculadora de Crédito Amortizado</title>
+  <title>Simulador de Amortización de Crédito</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --accent-color: #2980b9;
+      --light-bg: #f8fafc;
+      --dark-text: #2d3748;
+      --light-text: #4a5568;
+      --border-color: #e2e8f0;
+      --success-color: #38a169;
+      --error-color: #e53e3e;
+    }
+    
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f4f7fa;
-      color: #333;
+      font-family: 'Roboto', sans-serif;
+      background: var(--light-bg);
+      color: var(--dark-text);
       padding: 2rem;
-      max-width: 1000px;
-      margin: auto;
+      max-width: 1200px;
+      margin: 0 auto;
+      line-height: 1.6;
     }
+    
+    .container {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    h2, h3, h4 {
+      color: var(--primary-color);
+      margin-top: 0;
+    }
+    
     h2 {
-      text-align: center;
-      color: #2c3e50;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.5rem;
     }
-    label {
-      display: block;
-      margin-top: 1rem;
-    }
-    input, button, select {
-      padding: 0.5rem;
-      margin-top: 0.2rem;
-      font-size: 1rem;
-      width: 100%;
-      max-width: 300px;
-    }
-    .form-group {
+    
+    h3 {
+      font-size: 1.4rem;
+      font-weight: 600;
       margin-bottom: 1rem;
     }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--light-text);
+      font-size: 0.95rem;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border 0.3s ease;
+      max-width: 300px;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--secondary-color);
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+    }
+    
+    .btn-primary {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--accent-color);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-secondary {
+      background-color: white;
+      color: var(--secondary-color);
+      border: 1px solid var(--secondary-color);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--light-bg);
+    }
+    
+    .btn-icon {
+      margin-right: 8px;
+    }
+    
+    .abonos {
+      background-color: #f0f7ff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      border-left: 4px solid var(--secondary-color);
+    }
+    
+    .abono-list {
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 0 0;
+    }
+    
+    .abono-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border-color);
+    }
+    
+    .abono-item-content {
+      flex: 1;
+    }
+    
+    .abono-item-remove {
+      background: none;
+      border: none;
+      color: var(--error-color);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0.25rem;
+      margin-left: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+    
+    .abono-item-remove:hover {
+      background: rgba(229, 62, 62, 0.1);
+    }
+    
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1.5rem;
+      margin: 1.5rem 0;
       font-size: 0.9rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
+    
     th {
-      background: #2c3e50;
+      background-color: var(--primary-color);
       color: white;
-      padding: 0.6rem;
+      font-weight: 500;
+      padding: 0.75rem;
+      text-align: left;
     }
+    
     td {
-      padding: 0.5rem;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-color);
       text-align: right;
     }
+    
+    tr:nth-child(even) {
+      background-color: var(--light-bg);
+    }
+    
+    tr:hover {
+      background-color: #edf2f7;
+    }
+    
     .resumen {
+      background-color: white;
+      border-radius: 8px;
+      padding: 1.5rem;
       margin-top: 2rem;
-      background: #ecf0f1;
-      padding: 1rem;
-      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      border-left: 4px solid var(--success-color);
     }
-    .abonos {
-      background: #e3f2fd;
-      padding: 1rem;
-      border-radius: 8px;
+    
+    .resumen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
       margin-top: 1rem;
     }
-    .btn {
-      margin-top: 1rem;
-      background: #3498db;
-      color: white;
-      border: none;
-      cursor: pointer;
-      padding: 0.6rem 1rem;
+    
+    .resumen-item {
+      background: var(--light-bg);
+      padding: 1rem;
       border-radius: 6px;
     }
-    .btn:hover {
-      background: #2980b9;
+    
+    .resumen-item-label {
+      font-size: 0.85rem;
+      color: var(--light-text);
+      margin-bottom: 0.5rem;
     }
-    .abono-list li {
-      margin-bottom: 5px;
+    
+    .resumen-item-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .container {
+        padding: 1.25rem;
+      }
+      
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-
-  <div class="form-group">
-    <label>Monto del Crédito:</label>
-    <input type="number" id="monto" placeholder="Ej. 100000" />
+  <div class="container">
+    <h2>Simulador de Amortización</h2>
+    
+    <div class="grid">
+      <div class="form-group">
+        <label for="monto">Monto del Crédito</label>
+        <input type="number" id="monto" placeholder="Ej. 100,000" />
+      </div>
+      <div class="form-group">
+        <label for="tasa">Tasa de Interés Anual (%)</label>
+        <input type="number" id="tasa" step="0.01" placeholder="Ej. 12.5" />
+      </div>
+      <div class="form-group">
+        <label for="plazo">Plazo (meses)</label>
+        <input type="number" id="plazo" placeholder="Ej. 36" />
+      </div>
+    </div>
+    
+    <button class="btn btn-primary" onclick="calcularAmortizacion()">
+      <span class="btn-icon">📊</span> Calcular Amortización
+    </button>
+    
+    <div class="abonos">
+      <h3>Abonos Extraordinarios</h3>
+      <div class="grid">
+        <div class="form-group">
+          <label for="mesAbono">Mes del Abono</label>
+          <input type="number" id="mesAbono" placeholder="Ej. 5" />
+        </div>
+        <div class="form-group">
+          <label for="montoAbono">Monto del Abono</label>
+          <input type="number" id="montoAbono" placeholder="Ej. 10,000" />
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="agregarAbono()">
+        <span class="btn-icon">➕</span> Agregar Abono
+      </button>
+      <ul id="listaAbonos" class="abono-list"></ul>
+    </div>
+    
+    <div id="resumen" class="resumen" style="display: none;"></div>
+    
+    <div id="tabla"></div>
+    
+    <div class="action-buttons">
+      <button class="btn btn-primary" onclick="descargarExcel()">
+        <span class="btn-icon">📊</span> Exportar a Excel
+      </button>
+      <button class="btn btn-primary" onclick="descargarPDF()">
+        <span class="btn-icon">📄</span> Generar Reporte PDF
+      </button>
+    </div>
   </div>
-  <div class="form-group">
-    <label>Tasa de Interés Anual (%):</label>
-    <input type="number" id="tasa" step="0.01" placeholder="Ej. 12.5" />
-  </div>
-  <div class="form-group">
-    <label>Plazo (meses):</label>
-    <input type="number" id="plazo" placeholder="Ej. 36" />
-  </div>
-
-  <div class="abonos">
-    <h3>Abonos Extraordinarios</h3>
-    <label>Mes del Abono:</label>
-    <input type="number" id="mesAbono" placeholder="Ej. 5" />
-    <label>Monto del Abono:</label>
-    <input type="number" id="montoAbono" placeholder="Ej. 10000" />
-    <button class="btn" onclick="agregarAbono()">Agregar Abono</button>
-    <ul id="listaAbonos" class="abono-list"></ul>
-  </div>
-
-  <button class="btn" onclick="calcularAmortizacion()">Calcular Amortización</button>
-
-  <div class="resumen" id="resumen"></div>
-
-  <div id="tabla"></div>
-
-  <button class="btn" onclick="descargarExcel()">📥 Descargar Excel</button>
-  <button class="btn" onclick="descargarPDF()">📄 Descargar PDF</button>
 
   <script>
     let abonos = [];
+    let datosTabla = [];
 
     // Función para formatear números como moneda mexicana
     function formatoMoneda(num) {
@@ -128,12 +337,21 @@
     function agregarAbono() {
       const mes = parseInt(document.getElementById('mesAbono').value);
       const monto = parseFloat(document.getElementById('montoAbono').value);
-      if (mes && monto && mes > 0 && monto > 0) {
-        abonos.push({ mes, monto });
-        mostrarAbonos();
-        document.getElementById('mesAbono').value = '';
-        document.getElementById('montoAbono').value = '';
+      
+      if (!mes || mes <= 0) {
+        alert("Por favor ingrese un mes válido (mayor que 0)");
+        return;
       }
+      
+      if (!monto || monto <= 0) {
+        alert("Por favor ingrese un monto válido (mayor que 0)");
+        return;
+      }
+      
+      abonos.push({ mes, monto });
+      mostrarAbonos();
+      document.getElementById('mesAbono').value = '';
+      document.getElementById('montoAbono').value = '';
     }
 
     function eliminarAbono(index) {
@@ -144,19 +362,51 @@
     function mostrarAbonos() {
       const lista = document.getElementById('listaAbonos');
       lista.innerHTML = '';
-      abonos.forEach((abono, index) => {
+      
+      if (abonos.length === 0) {
         const li = document.createElement('li');
-        li.innerHTML = `Mes ${abono.mes}: ${formatoMoneda(abono.monto)} <button onclick="eliminarAbono(${index})">❌</button>`;
+        li.textContent = 'No hay abonos extraordinarios agregados';
+        li.style.color = 'var(--light-text)';
+        li.style.fontStyle = 'italic';
+        lista.appendChild(li);
+        return;
+      }
+      
+      abonos.sort((a, b) => a.mes - b.mes).forEach((abono, index) => {
+        const li = document.createElement('li');
+        li.className = 'abono-item';
+        li.innerHTML = `
+          <div class="abono-item-content">
+            <strong>Mes ${abono.mes}</strong>: ${formatoMoneda(abono.monto)}
+          </div>
+          <button class="abono-item-remove" onclick="eliminarAbono(${index})" title="Eliminar abono">
+            ✕
+          </button>
+        `;
         lista.appendChild(li);
       });
     }
-
-    let datosTabla = [];
 
     function calcularAmortizacion() {
       const montoInicial = parseFloat(document.getElementById('monto').value);
       const tasaAnual = parseFloat(document.getElementById('tasa').value);
       const plazo = parseInt(document.getElementById('plazo').value);
+
+      // Validaciones
+      if (!montoInicial || montoInicial <= 0) {
+        alert("Por favor ingrese un monto de crédito válido");
+        return;
+      }
+      
+      if (!tasaAnual || tasaAnual <= 0) {
+        alert("Por favor ingrese una tasa de interés válida");
+        return;
+      }
+      
+      if (!plazo || plazo <= 0) {
+        alert("Por favor ingrese un plazo válido");
+        return;
+      }
 
       const tasaMensual = tasaAnual / 12 / 100;
       const cuota = montoInicial * (tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazo)));
@@ -167,18 +417,20 @@
       datosTabla = [];
 
       let tablaHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Mes</th>
-              <th>Pago Mensual</th>
-              <th>Interés</th>
-              <th>Capital</th>
-              <th>Abono Extra</th>
-              <th>Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div class="container">
+          <h3>Tabla de Amortización Detallada</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Pago Mensual</th>
+                <th>Interés</th>
+                <th>Capital</th>
+                <th>Abono Extra</th>
+                <th>Saldo</th>
+              </tr>
+            </thead>
+            <tbody>
       `;
 
       let mes = 1;
@@ -217,39 +469,79 @@
         if (saldo <= 0.01) break;
       }
 
-      tablaHTML += '</tbody></table>';
+      tablaHTML += '</tbody></table></div>';
       document.getElementById('tabla').innerHTML = tablaHTML;
 
       document.getElementById('resumen').innerHTML = `
         <h3>Resumen Ejecutivo</h3>
-        <p><strong>Plazo Liquidado:</strong> ${mes - 1} meses</p>
-        <p><strong>Total Pagado:</strong> ${formatoMoneda(totalIntereses + totalCapital)}</p>
-        <p><strong>Total Abonado a Capital:</strong> ${formatoMoneda(totalCapital)}</p>
-        <p><strong>Total Intereses Pagados:</strong> ${formatoMoneda(totalIntereses)}</p>
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <div class="resumen-item-label">Plazo Liquidado</div>
+            <div class="resumen-item-value">${mes - 1} meses</div>
+          </div>
+          <div class="resumen-item">
+            <div class="resumen-item-label">Total Pagado</div>
+            <div class="resumen-item-value">${formatoMoneda(totalIntereses + totalCapital)}</div>
+          </div>
+          <div class="resumen-item">
+            <div class="resumen-item-label">Total a Capital</div>
+            <div class="resumen-item-value">${formatoMoneda(totalCapital)}</div>
+          </div>
+          <div class="resumen-item">
+            <div class="resumen-item-label">Total Intereses</div>
+            <div class="resumen-item-value">${formatoMoneda(totalIntereses)}</div>
+          </div>
+        </div>
       `;
+      
+      document.getElementById('resumen').style.display = 'block';
     }
 
     function descargarExcel() {
-      if (datosTabla.length === 0) return alert("Primero calcula la amortización.");
+      if (datosTabla.length === 0) {
+        alert("Primero calcule la amortización para generar el reporte.");
+        return;
+      }
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([
         ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"],
         ...datosTabla.map(fila => [
           fila[0],
-          fila[1].toFixed(2),
-          fila[2].toFixed(2),
-          fila[3].toFixed(2),
-          fila[4].toFixed(2),
-          fila[5].toFixed(2)
+          fila[1],
+          fila[2],
+          fila[3],
+          fila[4],
+          fila[5]
         ])
       ]);
+      
+      // Formato de moneda para las columnas numéricas
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let C = 1; C <= 5; ++C) {
+        for (let R = 1; R <= range.e.r; ++R) {
+          const cell = XLSX.utils.encode_cell({r:R, c:C});
+          if (!ws[cell]) continue;
+          ws[cell].z = '"$"#,##0.00_);("$"#,##0.00)';
+        }
+      }
+      
       XLSX.utils.book_append_sheet(wb, ws, "Amortización");
-      XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
+      
+      // Crear hoja de resumen
+      const resumen = document.getElementById("resumen").innerText.split("\n");
+      const resumenData = resumen.filter(line => line.trim() !== '').map(line => [line]);
+      const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+      XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
+      
+      XLSX.writeFile(wb, "reporte_amortizacion.xlsx");
     }
 
     async function descargarPDF() {
-      if (datosTabla.length === 0) return alert("Primero calcula la amortización.");
+      if (datosTabla.length === 0) {
+        alert("Primero calcule la amortización para generar el reporte.");
+        return;
+      }
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
@@ -258,50 +550,74 @@
         format: 'a4'
       });
       
-      // Estilo formal para el PDF
+      // Configuración de estilos
+      const primaryColor = [44, 62, 80];
+      const secondaryColor = [52, 152, 219];
+      const lightColor = [248, 250, 252];
+      
+      // Logo y encabezado
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
-      doc.setTextColor(0, 51, 102); // Azul oscuro
-      doc.text("Reporte de Amortización de Crédito", 148, 15, { align: 'center' });
+      doc.setTextColor(...primaryColor);
+      doc.text("Reporte de Amortización de Crédito", 148, 20, { align: 'center' });
       
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Generado el " + new Date().toLocaleDateString('es-MX', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }), 275, 15, { align: 'right' });
       
       // Resumen ejecutivo
+      doc.setFontSize(12);
+      doc.setTextColor(...primaryColor);
       doc.setFont('helvetica', 'bold');
-      doc.text("Resumen Ejecutivo", 20, 30);
-      doc.setFont('helvetica', 'normal');
+      doc.text("Resumen Ejecutivo", 20, 35);
       
-      const resumen = document.getElementById("resumen").innerText.split("\n");
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      
+      const resumen = document.getElementById("resumen").innerText.split("\n").filter(line => line.trim() !== '');
       resumen.forEach((line, i) => {
-        doc.text(line, 20, 40 + i * 6);
+        if (i === 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text(line, 20, 45);
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'normal');
+        } else {
+          doc.text(line, 20, 50 + (i-1) * 7);
+        }
       });
       
       // Tabla de amortización
+      doc.addPage('landscape');
       doc.setFont('helvetica', 'bold');
-      doc.text("Tabla de Amortización Detallada", 20, 70);
-      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(14);
+      doc.setTextColor(...primaryColor);
+      doc.text("Detalle de Amortización", 20, 20);
       
       // Encabezados de tabla
       const headers = ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"];
-      let x = 20;
       const columnWidths = [15, 30, 30, 30, 30, 30];
+      let x = 20;
       
-      doc.setFillColor(0, 51, 102);
+      doc.setFillColor(...primaryColor);
       doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
       
       headers.forEach((header, i) => {
-        doc.rect(x, 75, columnWidths[i], 8, 'F');
-        doc.text(header, x + 2, 80);
+        doc.rect(x, 25, columnWidths[i], 8, 'F');
+        doc.text(header, x + 2, 30);
         x += columnWidths[i];
       });
       
       // Filas de datos
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      let y = 85;
+      let y = 35;
+      doc.setFontSize(9);
       
       datosTabla.forEach((fila, i) => {
         if (y > 190) {
@@ -309,7 +625,7 @@
           y = 20;
           // Volver a dibujar encabezados en nueva página
           x = 20;
-          doc.setFillColor(0, 51, 102);
+          doc.setFillColor(...primaryColor);
           doc.setTextColor(255, 255, 255);
           doc.setFont('helvetica', 'bold');
           headers.forEach((header, i) => {
@@ -332,13 +648,15 @@
       });
       
       // Pie de página profesional
-      const fecha = new Date().toLocaleDateString('es-MX');
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Generado el ${fecha}`, 270, 200, { align: 'right' });
+      doc.text("© " + new Date().getFullYear() + " - Simulador de Créditos", 148, 200, { align: 'center' });
       
       doc.save("reporte_amortizacion.pdf");
     }
+    
+    // Mostrar lista de abonos vacía al cargar
+    mostrarAbonos();
   </script>
 </body>
 </html>
