@@ -297,7 +297,7 @@
       <h3>Abonos Extraordinarios</h3>
       <div class="grid">
         <div class="form-group">
-          <label for="fechaAbono">Fecha del Abono</label>
+          <label for="fechaAbono">Fecha del Abono (el 28 del mes deseado)</label>
           <input type="date" id="fechaAbono" />
         </div>
         <div class="form-group">
