@@ -5,6 +5,8 @@
   <title>Simulador de Amortización de Crédito</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/locale/es-mx.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -282,6 +284,10 @@
         <label for="plazo">Plazo (meses)</label>
         <input type="number" id="plazo" placeholder="Ej. 36" />
       </div>
+      <div class="form-group">
+        <label for="fechaInicio">Fecha de Inicio del Crédito</label>
+        <input type="date" id="fechaInicio" />
+      </div>
     </div>
     
     <button class="btn btn-primary" onclick="calcularAmortizacion()">
@@ -292,8 +298,8 @@
       <h3>Abonos Extraordinarios</h3>
       <div class="grid">
         <div class="form-group">
-          <label for="mesAbono">Mes del Abono</label>
-          <input type="number" id="mesAbono" placeholder="Ej. 5" />
+          <label for="fechaAbono">Fecha del Abono</label>
+          <input type="date" id="fechaAbono" />
         </div>
         <div class="form-group">
           <label for="montoAbono">Monto del Abono</label>
@@ -321,8 +327,12 @@
   </div>
 
   <script>
+    // Configurar moment.js en español
+    moment.locale('es-mx');
+    
     let abonos = [];
     let datosTabla = [];
+    let fechaInicioCredito = null;
 
     // Función para formatear números como moneda mexicana
     function formatoMoneda(num) {
@@ -334,12 +344,17 @@
       }).format(num);
     }
 
+    // Función para formatear fechas
+    function formatoFecha(fecha) {
+      return moment(fecha).format('LL');
+    }
+
     function agregarAbono() {
-      const mes = parseInt(document.getElementById('mesAbono').value);
+      const fechaAbono = document.getElementById('fechaAbono').value;
       const monto = parseFloat(document.getElementById('montoAbono').value);
       
-      if (!mes || mes <= 0) {
-        alert("Por favor ingrese un mes válido (mayor que 0)");
+      if (!fechaAbono) {
+        alert("Por favor seleccione una fecha válida para el abono");
         return;
       }
       
@@ -348,9 +363,9 @@
         return;
       }
       
-      abonos.push({ mes, monto });
+      abonos.push({ fecha: fechaAbono, monto });
       mostrarAbonos();
-      document.getElementById('mesAbono').value = '';
+      document.getElementById('fechaAbono').value = '';
       document.getElementById('montoAbono').value = '';
     }
 
@@ -372,12 +387,13 @@
         return;
       }
       
-      abonos.sort((a, b) => a.mes - b.mes).forEach((abono, index) => {
+      // Ordenar abonos por fecha
+      abonos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).forEach((abono, index) => {
         const li = document.createElement('li');
         li.className = 'abono-item';
         li.innerHTML = `
           <div class="abono-item-content">
-            <strong>Mes ${abono.mes}</strong>: ${formatoMoneda(abono.monto)}
+            <strong>${formatoFecha(abono.fecha)}</strong>: ${formatoMoneda(abono.monto)}
           </div>
           <button class="abono-item-remove" onclick="eliminarAbono(${index})" title="Eliminar abono">
             ✕
@@ -391,6 +407,7 @@
       const montoInicial = parseFloat(document.getElementById('monto').value);
       const tasaAnual = parseFloat(document.getElementById('tasa').value);
       const plazo = parseInt(document.getElementById('plazo').value);
+      fechaInicioCredito = document.getElementById('fechaInicio').value;
 
       // Validaciones
       if (!montoInicial || montoInicial <= 0) {
@@ -405,6 +422,11 @@
       
       if (!plazo || plazo <= 0) {
         alert("Por favor ingrese un plazo válido");
+        return;
+      }
+      
+      if (!fechaInicioCredito) {
+        alert("Por favor seleccione una fecha de inicio válida");
         return;
       }
 
@@ -422,7 +444,7 @@
           <table>
             <thead>
               <tr>
-                <th>Mes</th>
+                <th>Fecha de Pago</th>
                 <th>Pago Mensual</th>
                 <th>Interés</th>
                 <th>Capital</th>
@@ -433,7 +455,9 @@
             <tbody>
       `;
 
+      let fechaPago = moment(fechaInicioCredito);
       let mes = 1;
+      
       while (saldo > 0.01 && mes <= 600) {
         const interes = saldo * tasaMensual;
         let capital = cuota - interes;
@@ -442,7 +466,9 @@
         totalIntereses += interes;
         totalCapital += capital;
 
-        const abonoExtra = abonos.find(a => a.mes === mes);
+        // Verificar si hay abonos en esta fecha
+        const fechaPagoStr = fechaPago.format('YYYY-MM-DD');
+        const abonoExtra = abonos.find(a => a.fecha === fechaPagoStr);
         let abono = 0;
         let abonoTexto = '-';
         if (abonoExtra) {
@@ -452,11 +478,18 @@
           abonoTexto = formatoMoneda(abono);
         }
 
-        datosTabla.push([mes, cuota, interes, capital, abono, saldo]);
+        datosTabla.push([
+          fechaPago.toDate(),
+          cuota,
+          interes,
+          capital,
+          abono,
+          saldo
+        ]);
 
         tablaHTML += `
           <tr>
-            <td>${mes}</td>
+            <td>${formatoFecha(fechaPago.toDate())}</td>
             <td>${formatoMoneda(cuota)}</td>
             <td>${formatoMoneda(interes)}</td>
             <td>${formatoMoneda(capital)}</td>
@@ -465,6 +498,8 @@
           </tr>
         `;
 
+        // Avanzar al siguiente mes
+        fechaPago.add(1, 'month');
         mes++;
         if (saldo <= 0.01) break;
       }
@@ -475,6 +510,10 @@
       document.getElementById('resumen').innerHTML = `
         <h3>Resumen Ejecutivo</h3>
         <div class="resumen-grid">
+          <div class="resumen-item">
+            <div class="resumen-item-label">Fecha de Inicio</div>
+            <div class="resumen-item-value">${formatoFecha(fechaInicioCredito)}</div>
+          </div>
           <div class="resumen-item">
             <div class="resumen-item-label">Plazo Liquidado</div>
             <div class="resumen-item-value">${mes - 1} meses</div>
@@ -505,9 +544,9 @@
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([
-        ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"],
+        ["Fecha de Pago", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"],
         ...datosTabla.map(fila => [
-          fila[0],
+          moment(fila[0]).format('LL'),
           fila[1],
           fila[2],
           fila[3],
@@ -545,7 +584,7 @@
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
@@ -559,15 +598,11 @@
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(16);
       doc.setTextColor(...primaryColor);
-      doc.text("Reporte de Amortización de Crédito", 148, 20, { align: 'center' });
+      doc.text("Reporte de Amortización de Crédito", 105, 20, { align: 'center' });
       
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text("Generado el " + new Date().toLocaleDateString('es-MX', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      }), 275, 15, { align: 'right' });
+      doc.text("Generado el " + moment().format('LL'), 190, 15, { align: 'right' });
       
       // Resumen ejecutivo
       doc.setFontSize(12);
@@ -579,28 +614,33 @@
       doc.setTextColor(0, 0, 0);
       
       const resumen = document.getElementById("resumen").innerText.split("\n").filter(line => line.trim() !== '');
+      let y = 45;
+      
       resumen.forEach((line, i) => {
         if (i === 0) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(14);
-          doc.text(line, 20, 45);
+          doc.text(line, 20, y);
           doc.setFontSize(12);
           doc.setFont('helvetica', 'normal');
+          y += 8;
         } else {
-          doc.text(line, 20, 50 + (i-1) * 7);
+          doc.text(line, 20, y);
+          y += 7;
         }
       });
       
       // Tabla de amortización
-      doc.addPage('landscape');
+      y += 10;
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(...primaryColor);
-      doc.text("Detalle de Amortización", 20, 20);
+      doc.text("Detalle de Amortización", 20, y);
+      y += 10;
       
       // Encabezados de tabla
-      const headers = ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"];
-      const columnWidths = [15, 30, 30, 30, 30, 30];
+      const headers = ["Fecha", "Pago", "Interés", "Capital", "Extra", "Saldo"];
+      const columnWidths = [30, 25, 25, 25, 25, 30];
       let x = 20;
       
       doc.setFillColor(...primaryColor);
@@ -608,20 +648,20 @@
       doc.setFontSize(10);
       
       headers.forEach((header, i) => {
-        doc.rect(x, 25, columnWidths[i], 8, 'F');
-        doc.text(header, x + 2, 30);
+        doc.rect(x, y, columnWidths[i], 8, 'F');
+        doc.text(header, x + 2, y + 5);
         x += columnWidths[i];
       });
       
       // Filas de datos
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      let y = 35;
-      doc.setFontSize(9);
+      y += 8;
+      doc.setFontSize(8);
       
       datosTabla.forEach((fila, i) => {
-        if (y > 190) {
-          doc.addPage('landscape');
+        if (y > 270) {
+          doc.addPage();
           y = 20;
           // Volver a dibujar encabezados en nueva página
           x = 20;
@@ -635,25 +675,34 @@
           });
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(0, 0, 0);
-          y += 15;
+          y += 8;
         }
         
         x = 20;
         fila.forEach((valor, j) => {
-          const formattedValue = j === 0 ? valor : formatoMoneda(valor);
+          let formattedValue;
+          if (j === 0) {
+            formattedValue = moment(valor).format('MMM YYYY');
+          } else {
+            formattedValue = formatoMoneda(valor);
+          }
           doc.text(formattedValue.toString(), x + 2, y + 5);
           x += columnWidths[j];
         });
-        y += 7;
+        y += 6;
       });
       
       // Pie de página profesional
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text("© " + new Date().getFullYear() + " - Simulador de Créditos", 148, 200, { align: 'center' });
+      doc.text("© " + new Date().getFullYear() + " - Simulador de Créditos Profesional", 105, 285, { align: 'center' });
       
       doc.save("reporte_amortizacion.pdf");
     }
+    
+    // Configurar fecha mínima para los inputs de fecha (hoy)
+    document.getElementById('fechaInicio').min = new Date().toISOString().split('T')[0];
+    document.getElementById('fechaAbono').min = new Date().toISOString().split('T')[0];
     
     // Mostrar lista de abonos vacía al cargar
     mostrarAbonos();
