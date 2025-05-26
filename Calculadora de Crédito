@@ -1,37 +1,119 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Calculadora de Amortización</title>
+  <title>Calculadora de Crédito Amortizado</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; background: #f7f7f7; }
-    input, button, select { padding: 0.5rem; margin: 0.5rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: right; }
-    th { background-color: #eee; }
-    .section { background: white; padding: 1rem; margin-top: 1rem; border-radius: 0.5rem; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7fa;
+      color: #333;
+      padding: 2rem;
+      max-width: 1000px;
+      margin: auto;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input, button, select {
+      padding: 0.5rem;
+      margin-top: 0.2rem;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 300px;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th {
+      background: #2c3e50;
+      color: white;
+      padding: 0.6rem;
+    }
+    td {
+      padding: 0.5rem;
+      text-align: right;
+    }
+    .resumen {
+      margin-top: 2rem;
+      background: #ecf0f1;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+    .abonos {
+      background: #e3f2fd;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .btn {
+      margin-top: 1rem;
+      background: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 0.6rem 1rem;
+      border-radius: 6px;
+    }
+    .btn:hover {
+      background: #2980b9;
+    }
+    .abono-list li {
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>Calculadora de Amortización con Abonos a Capital</h1>
 
-  <div class="section">
-    <label>Monto del Crédito: $<input type="number" id="monto" /></label><br>
-    <label>Tasa de Interés Anual (%): <input type="number" id="tasa" step="0.01" /></label><br>
-    <label>Plazo (meses): <input type="number" id="plazo" /></label><br>
+  <h1>Calculadora de Crédito Amortizado</h1>
+
+  <div class="form-group">
+    <label>Monto del Crédito:</label>
+    <input type="number" id="monto" placeholder="Ej. 100000" />
+  </div>
+  <div class="form-group">
+    <label>Tasa de Interés Anual (%):</label>
+    <input type="number" id="tasa" step="0.01" placeholder="Ej. 12.5" />
+  </div>
+  <div class="form-group">
+    <label>Plazo (meses):</label>
+    <input type="number" id="plazo" placeholder="Ej. 36" />
   </div>
 
-  <div class="section">
-    <h3>Abonos Extraordinarios a Capital</h3>
-    <label>Mes del abono (ej: 3): <input type="number" id="mesAbono" min="1" /></label>
-    <label>Monto del abono: $<input type="number" id="montoAbono" /></label>
-    <button onclick="agregarAbono()">Agregar Abono</button>
-    <ul id="listaAbonos"></ul>
+  <div class="abonos">
+    <h3>Abonos Extraordinarios</h3>
+    <label>Mes del Abono:</label>
+    <input type="number" id="mesAbono" placeholder="Ej. 5" />
+    <label>Monto del Abono:</label>
+    <input type="number" id="montoAbono" placeholder="Ej. 10000" />
+    <button class="btn" onclick="agregarAbono()">Agregar Abono</button>
+    <ul id="listaAbonos" class="abono-list"></ul>
   </div>
 
-  <button onclick="calcularAmortizacion()">Calcular</button>
+  <button class="btn" onclick="calcularAmortizacion()">Calcular Amortización</button>
 
-  <div id="resumen" class="section"></div>
-  <div id="tabla" class="section"></div>
+  <div class="resumen" id="resumen"></div>
+
+  <div id="tabla"></div>
+
+  <button class="btn" onclick="descargarExcel()">📥 Descargar Excel</button>
+  <button class="btn" onclick="descargarPDF()">📄 Descargar PDF</button>
 
   <script>
     let abonos = [];
@@ -39,11 +121,17 @@
     function agregarAbono() {
       const mes = parseInt(document.getElementById('mesAbono').value);
       const monto = parseFloat(document.getElementById('montoAbono').value);
-
-      if (mes && monto) {
+      if (mes && monto && mes > 0 && monto > 0) {
         abonos.push({ mes, monto });
         mostrarAbonos();
+        document.getElementById('mesAbono').value = '';
+        document.getElementById('montoAbono').value = '';
       }
+    }
+
+    function eliminarAbono(index) {
+      abonos.splice(index, 1);
+      mostrarAbonos();
     }
 
     function mostrarAbonos() {
@@ -51,10 +139,12 @@
       lista.innerHTML = '';
       abonos.forEach((abono, index) => {
         const li = document.createElement('li');
-        li.textContent = `Mes ${abono.mes}: $${abono.monto.toFixed(2)}`;
+        li.innerHTML = `Mes ${abono.mes}: $${abono.monto.toFixed(2)} <button onclick="eliminarAbono(${index})">❌</button>`;
         lista.appendChild(li);
       });
     }
+
+    let datosTabla = [];
 
     function calcularAmortizacion() {
       const montoInicial = parseFloat(document.getElementById('monto').value);
@@ -67,6 +157,8 @@
       let saldo = montoInicial;
       let totalIntereses = 0;
       let totalCapital = 0;
+      datosTabla = [];
+
       let tablaHTML = `
         <table>
           <thead>
@@ -76,39 +168,32 @@
               <th>Interés</th>
               <th>Capital</th>
               <th>Abono Extra</th>
-              <th>Saldo Restante</th>
+              <th>Saldo</th>
             </tr>
           </thead>
           <tbody>
       `;
 
       let mes = 1;
-
-      while (saldo > 0.01 && mes <= 600) { // límite arbitrario por seguridad
+      while (saldo > 0.01 && mes <= 600) {
         const interes = saldo * tasaMensual;
         let capital = cuota - interes;
-
-        // Si la cuota es mayor al saldo restante, ajusta
-        if (capital > saldo) {
-          capital = saldo;
-        }
-
+        if (capital > saldo) capital = saldo;
         saldo -= capital;
         totalIntereses += interes;
         totalCapital += capital;
 
-        // Aplica abono extraordinario si corresponde
         const abonoExtra = abonos.find(a => a.mes === mes);
-        let abonoTexto = '';
+        let abono = 0;
+        let abonoTexto = '-';
         if (abonoExtra) {
-          let abono = abonoExtra.monto;
-          if (abono > saldo) abono = saldo;
+          abono = Math.min(abonoExtra.monto, saldo);
           saldo -= abono;
           totalCapital += abono;
           abonoTexto = `$${abono.toFixed(2)}`;
-        } else {
-          abonoTexto = '-';
         }
+
+        datosTabla.push([mes, cuota.toFixed(2), interes.toFixed(2), capital.toFixed(2), abono.toFixed(2), saldo.toFixed(2)]);
 
         tablaHTML += `
           <tr>
@@ -128,16 +213,55 @@
       tablaHTML += '</tbody></table>';
       document.getElementById('tabla').innerHTML = tablaHTML;
 
-      // Resumen
-      const resumenHTML = `
-        <h3>Resumen</h3>
-        <p><strong>Plazo liquidado:</strong> ${mes - 1} meses</p>
-        <p><strong>Total pagado:</strong> $${(totalIntereses + totalCapital).toFixed(2)}</p>
-        <p><strong>Total intereses pagados:</strong> $${totalIntereses.toFixed(2)}</p>
-        <p><strong>Total abonado a capital:</strong> $${totalCapital.toFixed(2)}</p>
+      document.getElementById('resumen').innerHTML = `
+        <h3>Resumen Ejecutivo</h3>
+        <p><strong>Plazo Liquidado:</strong> ${mes - 1} meses</p>
+        <p><strong>Total Pagado:</strong> $${(totalIntereses + totalCapital).toFixed(2)}</p>
+        <p><strong>Total Abonado a Capital:</strong> $${totalCapital.toFixed(2)}</p>
+        <p><strong>Total Intereses Pagados:</strong> $${totalIntereses.toFixed(2)}</p>
       `;
-      document.getElementById('resumen').innerHTML = resumenHTML;
+    }
+
+    function descargarExcel() {
+      if (datosTabla.length === 0) return alert("Primero calcula la amortización.");
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([
+        ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"],
+        ...datosTabla
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws, "Amortización");
+      XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
+    }
+
+    async function descargarPDF() {
+      if (datosTabla.length === 0) return alert("Primero calcula la amortización.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(12);
+      doc.text("Resumen Ejecutivo", 14, 15);
+      const resumen = document.getElementById("resumen").innerText.split("\n");
+      resumen.forEach((line, i) => {
+        doc.text(line, 14, 25 + i * 6);
+      });
+
+      doc.text("Tabla de Amortización", 14, 60);
+      let y = 70;
+      doc.setFontSize(10);
+      doc.text("Mes | Mensual | Interés | Capital | Extra | Saldo", 14, y);
+      datosTabla.forEach((fila, i) => {
+        y += 6;
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(fila.join(" | "), 14, y);
+      });
+
+      doc.save("tabla_amortizacion.pdf");
     }
   </script>
+
 </body>
 </html>
