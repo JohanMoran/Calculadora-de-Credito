@@ -13,7 +13,7 @@
       max-width: 1000px;
       margin: auto;
     }
-    h1, h2 {
+    h2 {
       text-align: center;
       color: #2c3e50;
     }
@@ -80,8 +80,6 @@
 </head>
 <body>
 
-  <h1>Calculadora de Crédito Amortizado</h1>
-
   <div class="form-group">
     <label>Monto del Crédito:</label>
     <input type="number" id="monto" placeholder="Ej. 100000" />
@@ -117,6 +115,16 @@
   <script>
     let abonos = [];
 
+    // Función para formatear números como moneda mexicana
+    function formatoMoneda(num) {
+      return new Intl.NumberFormat('es-MX', { 
+        style: 'currency', 
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(num);
+    }
+
     function agregarAbono() {
       const mes = parseInt(document.getElementById('mesAbono').value);
       const monto = parseFloat(document.getElementById('montoAbono').value);
@@ -138,7 +146,7 @@
       lista.innerHTML = '';
       abonos.forEach((abono, index) => {
         const li = document.createElement('li');
-        li.innerHTML = `Mes ${abono.mes}: $${abono.monto.toFixed(2)} <button onclick="eliminarAbono(${index})">❌</button>`;
+        li.innerHTML = `Mes ${abono.mes}: ${formatoMoneda(abono.monto)} <button onclick="eliminarAbono(${index})">❌</button>`;
         lista.appendChild(li);
       });
     }
@@ -189,19 +197,19 @@
           abono = Math.min(abonoExtra.monto, saldo);
           saldo -= abono;
           totalCapital += abono;
-          abonoTexto = `$${abono.toFixed(2)}`;
+          abonoTexto = formatoMoneda(abono);
         }
 
-        datosTabla.push([mes, cuota.toFixed(2), interes.toFixed(2), capital.toFixed(2), abono.toFixed(2), saldo.toFixed(2)]);
+        datosTabla.push([mes, cuota, interes, capital, abono, saldo]);
 
         tablaHTML += `
           <tr>
             <td>${mes}</td>
-            <td>$${cuota.toFixed(2)}</td>
-            <td>$${interes.toFixed(2)}</td>
-            <td>$${capital.toFixed(2)}</td>
+            <td>${formatoMoneda(cuota)}</td>
+            <td>${formatoMoneda(interes)}</td>
+            <td>${formatoMoneda(capital)}</td>
             <td>${abonoTexto}</td>
-            <td>$${saldo > 0 ? saldo.toFixed(2) : '0.00'}</td>
+            <td>${saldo > 0 ? formatoMoneda(saldo) : formatoMoneda(0)}</td>
           </tr>
         `;
 
@@ -215,9 +223,9 @@
       document.getElementById('resumen').innerHTML = `
         <h3>Resumen Ejecutivo</h3>
         <p><strong>Plazo Liquidado:</strong> ${mes - 1} meses</p>
-        <p><strong>Total Pagado:</strong> $${(totalIntereses + totalCapital).toFixed(2)}</p>
-        <p><strong>Total Abonado a Capital:</strong> $${totalCapital.toFixed(2)}</p>
-        <p><strong>Total Intereses Pagados:</strong> $${totalIntereses.toFixed(2)}</p>
+        <p><strong>Total Pagado:</strong> ${formatoMoneda(totalIntereses + totalCapital)}</p>
+        <p><strong>Total Abonado a Capital:</strong> ${formatoMoneda(totalCapital)}</p>
+        <p><strong>Total Intereses Pagados:</strong> ${formatoMoneda(totalIntereses)}</p>
       `;
     }
 
@@ -227,7 +235,14 @@
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([
         ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"],
-        ...datosTabla
+        ...datosTabla.map(fila => [
+          fila[0],
+          fila[1].toFixed(2),
+          fila[2].toFixed(2),
+          fila[3].toFixed(2),
+          fila[4].toFixed(2),
+          fila[5].toFixed(2)
+        ])
       ]);
       XLSX.utils.book_append_sheet(wb, ws, "Amortización");
       XLSX.writeFile(wb, "tabla_amortizacion.xlsx");
@@ -237,30 +252,93 @@
       if (datosTabla.length === 0) return alert("Primero calcula la amortización.");
 
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Estilo formal para el PDF
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(0, 51, 102); // Azul oscuro
+      doc.text("Reporte de Amortización de Crédito", 148, 15, { align: 'center' });
+      
       doc.setFontSize(12);
-      doc.text("Resumen Ejecutivo", 14, 15);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      
+      // Resumen ejecutivo
+      doc.setFont('helvetica', 'bold');
+      doc.text("Resumen Ejecutivo", 20, 30);
+      doc.setFont('helvetica', 'normal');
+      
       const resumen = document.getElementById("resumen").innerText.split("\n");
       resumen.forEach((line, i) => {
-        doc.text(line, 14, 25 + i * 6);
+        doc.text(line, 20, 40 + i * 6);
       });
-
-      doc.text("Tabla de Amortización", 14, 60);
-      let y = 70;
-      doc.setFontSize(10);
-      doc.text("Mes | Mensual | Interés | Capital | Extra | Saldo", 14, y);
+      
+      // Tabla de amortización
+      doc.setFont('helvetica', 'bold');
+      doc.text("Tabla de Amortización Detallada", 20, 70);
+      doc.setFont('helvetica', 'normal');
+      
+      // Encabezados de tabla
+      const headers = ["Mes", "Pago Mensual", "Interés", "Capital", "Abono Extra", "Saldo"];
+      let x = 20;
+      const columnWidths = [15, 30, 30, 30, 30, 30];
+      
+      doc.setFillColor(0, 51, 102);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      
+      headers.forEach((header, i) => {
+        doc.rect(x, 75, columnWidths[i], 8, 'F');
+        doc.text(header, x + 2, 80);
+        x += columnWidths[i];
+      });
+      
+      // Filas de datos
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      let y = 85;
+      
       datosTabla.forEach((fila, i) => {
-        y += 6;
-        if (y > 280) {
-          doc.addPage();
+        if (y > 190) {
+          doc.addPage('landscape');
           y = 20;
+          // Volver a dibujar encabezados en nueva página
+          x = 20;
+          doc.setFillColor(0, 51, 102);
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          headers.forEach((header, i) => {
+            doc.rect(x, y, columnWidths[i], 8, 'F');
+            doc.text(header, x + 2, y + 5);
+            x += columnWidths[i];
+          });
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(0, 0, 0);
+          y += 15;
         }
-        doc.text(fila.join(" | "), 14, y);
+        
+        x = 20;
+        fila.forEach((valor, j) => {
+          const formattedValue = j === 0 ? valor : formatoMoneda(valor);
+          doc.text(formattedValue.toString(), x + 2, y + 5);
+          x += columnWidths[j];
+        });
+        y += 7;
       });
-
-      doc.save("tabla_amortizacion.pdf");
+      
+      // Pie de página profesional
+      const fecha = new Date().toLocaleDateString('es-MX');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generado el ${fecha}`, 270, 200, { align: 'right' });
+      
+      doc.save("reporte_amortizacion.pdf");
     }
   </script>
-
 </body>
 </html>
