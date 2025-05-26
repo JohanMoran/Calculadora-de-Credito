@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Amortización</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; background: #f7f7f7; }
+    input, button { padding: 0.5rem; margin: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: right; }
+    th { background-color: #eee; }
+  </style>
+</head>
+<body>
+  <h1>Calculadora de Amortización</h1>
+
+  <label>Monto del Crédito: $<input type="number" id="monto" /></label><br>
+  <label>Tasa de Interés Anual (%): <input type="number" id="tasa" step="0.01" /></label><br>
+  <label>Plazo (meses): <input type="number" id="plazo" /></label><br>
+  <button onclick="calcularAmortizacion()">Calcular</button>
+
+  <div id="tabla"></div>
+
+  <script>
+    function calcularAmortizacion() {
+      const monto = parseFloat(document.getElementById('monto').value);
+      const tasaAnual = parseFloat(document.getElementById('tasa').value);
+      const plazo = parseInt(document.getElementById('plazo').value);
+
+      const tasaMensual = tasaAnual / 12 / 100;
+      const cuota = monto * (tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazo)));
+
+      let saldo = monto;
+      let tablaHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Mes</th>
+              <th>Pago Mensual</th>
+              <th>Interés</th>
+              <th>Capital</th>
+              <th>Saldo Restante</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (let i = 1; i <= plazo; i++) {
+        const interes = saldo * tasaMensual;
+        const capital = cuota - interes;
+        saldo -= capital;
+
+        tablaHTML += `
+          <tr>
+            <td>${i}</td>
+            <td>$${cuota.toFixed(2)}</td>
+            <td>$${interes.toFixed(2)}</td>
+            <td>$${capital.toFixed(2)}</td>
+            <td>$${saldo > 0 ? saldo.toFixed(2) : '0.00'}</td>
+          </tr>
+        `;
+      }
+
+      tablaHTML += '</tbody></table>';
+      document.getElementById('tabla').innerHTML = tablaHTML;
+    }
+  </script>
+</body>
+</html>
