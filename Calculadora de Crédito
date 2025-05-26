@@ -332,6 +332,7 @@
     let abonos = [];
     let datosTabla = [];
     let fechaInicioCredito = null;
+    let totalAbonosExtra = 0;
 
     // Función para formatear números como moneda mexicana
     function formatoMoneda(num) {
@@ -363,14 +364,26 @@
       }
       
       abonos.push({ fecha: fechaAbono, monto });
+      totalAbonosExtra += monto;
       mostrarAbonos();
       document.getElementById('fechaAbono').value = '';
       document.getElementById('montoAbono').value = '';
+      
+      // Recalcular la amortización si ya existe una tabla
+      if (datosTabla.length > 0) {
+        calcularAmortizacion();
+      }
     }
 
     function eliminarAbono(index) {
+      totalAbonosExtra -= abonos[index].monto;
       abonos.splice(index, 1);
       mostrarAbonos();
+      
+      // Recalcular la amortización si ya existe una tabla
+      if (datosTabla.length > 0) {
+        calcularAmortizacion();
+      }
     }
 
     function mostrarAbonos() {
@@ -435,6 +448,7 @@
       let saldo = montoInicial;
       let totalIntereses = 0;
       let totalCapital = 0;
+      totalAbonosExtra = 0; // Reiniciar el total de abonos
       datosTabla = [];
 
       let tablaHTML = `
@@ -474,6 +488,7 @@
           abono = Math.min(abonoExtra.monto, saldo);
           saldo -= abono;
           totalCapital += abono;
+          totalAbonosExtra += abono;
           abonoTexto = formatoMoneda(abono);
         }
 
@@ -528,6 +543,10 @@
           <div class="resumen-item">
             <div class="resumen-item-label">Total Intereses</div>
             <div class="resumen-item-value">${formatoMoneda(totalIntereses)}</div>
+          </div>
+          <div class="resumen-item">
+            <div class="resumen-item-label">Abonos Extraordinarios</div>
+            <div class="resumen-item-value">${formatoMoneda(totalAbonosExtra)}</div>
           </div>
         </div>
       `;
